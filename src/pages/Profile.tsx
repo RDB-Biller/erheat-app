@@ -14,7 +14,7 @@ export default function Profile() {
   const [msg, setMsg] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!user) return;
-    Promise.all([api.catalogue(), api.profile()]).then(([c, p]) => {
+    Promise.all([api.catalogue(), api.profile().catch((e) => { setErr(`Your saved details could not be loaded (${e.message}). You can still fill them in, but saving needs the latest Biller update.`); return { lines: {}, updatedAt: null } as P; })]).then(([c, p]) => {
       setCat(c); setProf(p);
       setEv(Object.fromEntries(Object.entries(p.lines).map(([k, v]) => [k, v.evidence || {}])));
       setPay(Object.fromEntries(Object.entries(p.lines).filter(([, v]) => v.payee).map(([k, v]) => [k, v.payee!])));
@@ -22,7 +22,7 @@ export default function Profile() {
   }, [user?._id]);
   if (!user) return <Redirect to={"/signin?next=%2Fprofile"} />;
   if (!cat || !prof) return <main className="page">{err ? <Notice kind="error">{err}</Notice> : <Spinner />}</main>;
-  const lines = cat.lines.filter((l) => l.enabled);
+  const lines = cat.lines; // every loan type, including ones still opening, so details can be saved ahead of time
 
   async function save(e: FormEvent) {
     e.preventDefault(); setBusy(true); setErr(""); setMsg("");
@@ -39,13 +39,14 @@ export default function Profile() {
   return (
     <main className="page narrow">
       <h1 className="h1">Your profile</h1>
+      {err && <Notice kind="error">{err}</Notice>}
       <p className="lede">Optional. Add what you already know now, such as your meter number or your landlord, so an emergency takes a minute instead of ten. You can skip any of it, and change it any time.</p>
       <form onSubmit={save}>
         {lines.map((l) => {
           const fs = l.fields.filter((f) => STABLE.includes(f.key));
           return (
             <fieldset key={l.key} style={{ ["--line" as any]: lineColor(l.key) }}>
-              <legend><span style={{ color: lineColor(l.key) }}><Icon name={l.icon} size={18} /></span> {l.short}</legend>
+              <legend><span style={{ color: lineColor(l.key) }}><Icon name={l.icon} size={18} /></span> {l.short}{!l.enabled && <small> · opening soon</small>}</legend>
               {fs.map((f) => <Field key={f.key} label={f.label.replace(" (optional)", "")} type={f.type === "number" ? "number" : "text"} inputMode={f.type === "number" ? "decimal" : undefined} value={(ev[l.key] || {})[f.key] || ""} onChange={(e) => setEv((p) => ({ ...p, [l.key]: { ...(p[l.key] || {}), [f.key]: e.target.value } }))} />)}
               {l.key !== "health" && <>
                 <Field label={`${l.payeeLabel}: name`} value={(pay[l.key] || { name: "" }).name} onChange={(e) => setPay((p) => ({ ...p, [l.key]: { name: e.target.value, phone: (p[l.key] || { phone: "" }).phone } }))} />
@@ -55,7 +56,7 @@ export default function Profile() {
             </fieldset>
           );
         })}
-        {msg && <Notice kind="ok">{msg}</Notice>}{err && <Notice kind="error">{err}</Notice>}
+        {msg && <Notice kind="ok">{msg}</Notice>}
         <button className="btn" disabled={busy}>{busy ? "Saving" : "Save profile"}</button>
       </form>
     </main>
