@@ -19,6 +19,7 @@ export default function Me() {
       </p>
       {msg && <Notice kind="ok">{msg}</Notice>}{err && <Notice kind="error">{err}</Notice>}
       <div className="field"><label htmlFor="ml">Language for our texts to you</label><select id="ml" value={user.language || "en"} onChange={(e) => setLang(e.target.value)}>{LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
+      <div className="soft"><p><b>Complete your profile</b></p><p>Save your meter number, landlord or school once, so every request is filled in for you. Optional.</p><a className="btn ghostdark" href="#/profile">Complete or update your profile</a></div>
       <h2>For sellers and vendors</h2>
       <p>If a customer shows you an ER HEAT voucher, redeem it here before you hand over goods or services.</p>
       <a className="btn ghostdark" href={`${BILLER}/erheat/redeem`}>Redeem a voucher</a>

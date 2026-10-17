@@ -3,6 +3,7 @@ import Apply from "./pages/Apply";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Me from "./pages/Me";
+import Profile from "./pages/Profile";
 import Passport from "./pages/Passport";
 import RequestDetail from "./pages/RequestDetail";
 import Requests from "./pages/Requests";
@@ -19,6 +20,7 @@ export default function App() {
   else if (r === "/requests") page = <Requests />;
   else if (r.startsWith("/requests/")) page = <RequestDetail key={r} id={r.slice(10)} />;
   else if (r === "/passport") page = <Passport />;
+  else if (r === "/profile") page = <Profile />;
   else if (r === "/me") page = <Me />;
   else page = <Home />;
   const bare = r === "/signin" || r === "/signup" || r === "/verify";

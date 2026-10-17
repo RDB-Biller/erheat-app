@@ -19,6 +19,13 @@ export type Loan = {
   voucher: { code: string; expiresAt: string; note: string } | null; evidence: Record<string, string | number>;
   createdAt: string; expiresAt: string; history: { at: string; type: string }[]; repayments: { at: string; amount: number }[];
 };
+export type Person = { name: string; phone: string };
+export type ProfileLine = { evidence: Record<string, string>; payee?: Person; verifier?: Person };
+export type Profile = { lines: Record<string, ProfileLine>; updatedAt: string | null };
+export type Facility = { id: string; name: string; canConfirm: boolean; phone: string };
+export type Pending = { billId: string; kind: "bill"; facility: { id: string; name: string; canConfirm: boolean }; insureCreditNo: string; note: string; billTotal: number; amount: number; at: string };
+export type Awarded = Loan & { awarded: number; repaid: number };
+export type History = { items: Awarded[]; totals: { count: number; borrowed: number; repaid: number; closed: number } };
 export type AuthOptions = { requirePhone: boolean; emailSignup: boolean };
 export type User = { _id: string; first_name: string; last_name: string; phone?: string; email?: string; phoneVerified: boolean; emailVerified?: boolean; language?: string; tokens?: { token: string }[] };
 
@@ -56,6 +63,12 @@ export const api = {
   consent: (id: string, agree: boolean) => call<Loan>(`/erheat/api/apps/${id}/consent`, { body: { agree } }),
   cancel: (id: string) => call<Loan>(`/erheat/api/apps/${id}/cancel`, { method: "POST", body: {} }),
   resend: (id: string, vid: string) => call<Loan>(`/erheat/api/apps/${id}/resend/${vid}`, { method: "POST", body: {} }),
+
+  profile: () => call<Profile>("/erheat/api/profile"),
+  saveProfile: (lines: Record<string, ProfileLine | null>) => call<Profile>("/erheat/api/profile", { method: "PUT", body: { lines } }),
+  facilities: () => call<Facility[]>("/erheat/api/health/facilities", { auth: false }),
+  pending: () => call<{ items: Pending[]; cap?: number }>("/erheat/api/health/pending"),
+  history: () => call<History>("/erheat/api/history"),
 
   authOptions: () => call<AuthOptions>(`${PA}/auth_options`, { auth: false }),
   register: (b: { first_name: string; last_name: string; phone?: string; email?: string; password: string; language: string }) => call<User>(`${PA}/register`, { body: { ...b, source: "erheat" }, auth: false }),

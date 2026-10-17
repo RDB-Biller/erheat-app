@@ -36,6 +36,7 @@ export default function Home() {
         {!cat && !err && <Spinner />}
         {cat && !cat.enabled && <Notice>ER HEAT is not open yet. You can look around, and we will tell you here when requests open.</Notice>}
         {cat && <div className="lines" role="list">{cat.lines.map((l) => <div role="listitem" key={l.key}><Row l={l} /></div>)}</div>}
+        {user && <p className="soft"><b>Make the next emergency faster.</b> Save your meter number, landlord or school once. <a href="#/profile">Complete or update your profile</a></p>}
         <section className="how" aria-labelledby="how-h">
           <h2 id="how-h">How a request works</h2>
           <p>You tell us the amount and who it is for. We text that person to confirm. When everyone has confirmed, you agree and we send your request to the lender. If it is approved, the lender pays them directly.</p>
