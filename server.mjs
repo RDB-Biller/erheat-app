@@ -19,7 +19,7 @@ createServer(async (req, res) => {
   try {
     const body = await readFile(join(root, p));
     const ext = extname(p);
-    res.writeHead(200, { ...headers, "content-type": types[ext] || "application/octet-stream", "cache-control": ext === ".html" ? "no-cache" : "public, max-age=3600" });
+    res.writeHead(200, { ...headers, "content-type": types[ext] || "application/octet-stream", "cache-control": /-[A-Z0-9]{8}\.(js|css)$/.test(p) ? "public, max-age=31536000, immutable" : "no-cache" });
     res.end(body);
   } catch {
     try { res.writeHead(200, { ...headers, "content-type": types[".html"], "cache-control": "no-cache" }); res.end(await readFile(join(root, "index.html"))); }
