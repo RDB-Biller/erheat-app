@@ -1,0 +1,25 @@
+import { useState } from "react";
+import { api, BILLER } from "../api";
+import { LANGS } from "../format";
+import { go } from "../router";
+import { useSession } from "../session";
+import { Notice, Redirect } from "../ui";
+
+export default function Me() {
+  const { user, signOut, refresh } = useSession();
+  const [msg, setMsg] = useState(""); const [err, setErr] = useState("");
+  if (!user) return <Redirect to={"/signin?next=%2Fme"} />;
+  async function setLang(code: string) { setErr(""); setMsg(""); try { await api.updateLanguage(code); await refresh(); setMsg("Language saved."); } catch (x: any) { setErr(x.message); } }
+  return (
+    <main className="page">
+      <h1 className="h1">{user.first_name} {user.last_name}</h1>
+      <p className="lede">{user.phone} · {user.phoneVerified ? "phone confirmed" : <a href="#/verify">confirm your phone</a>}</p>
+      {msg && <Notice kind="ok">{msg}</Notice>}{err && <Notice kind="error">{err}</Notice>}
+      <div className="field"><label htmlFor="ml">Language for our texts to you</label><select id="ml" value={user.language || "en"} onChange={(e) => setLang(e.target.value)}>{LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
+      <h2>For sellers and vendors</h2>
+      <p>If a customer shows you an ER HEAT voucher, redeem it here before you hand over goods or services.</p>
+      <a className="btn ghostdark" href={`${BILLER}/erheat/redeem`}>Redeem a voucher</a>
+      <button className="link danger" onClick={() => { signOut(); go("/"); }}>Sign out</button>
+    </main>
+  );
+}

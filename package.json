@@ -1,0 +1,23 @@
+{
+  "name": "erheat-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ER HEAT: emergency micro-loans front end. All rules, verification and lender hand-off live in the HNN Biller.",
+  "scripts": {
+    "dev": "node build.mjs --serve",
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": { "node": ">=18" }
+}
