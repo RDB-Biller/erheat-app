@@ -20,7 +20,7 @@ export default function Requests() {
   const { user } = useSession();
   const [tab, setTab] = useState<"open" | "history">("open");
   const [loans, setLoans] = useState<Loan[] | null>(null); const [hist, setHist] = useState<History | null>(null); const [err, setErr] = useState("");
-  useEffect(() => { if (user) { api.loans().then(setLoans).catch((e) => setErr(e.message)); api.history().then(setHist).catch((e) => setErr(e.message)); } }, [user?._id]);
+  useEffect(() => { if (user) { api.loans().then(setLoans).catch((e) => setErr(e.message)); api.history().then(setHist).catch(() => setHist({ items: [], totals: { count: 0, borrowed: 0, repaid: 0, closed: 0 } })); } }, [user?._id]);
   if (!user) return <Redirect to={"/signin?next=%2Frequests"} />;
   const awarded = new Set((hist?.items || []).map((h) => h.id));
   const open = (loans || []).filter((l) => !awarded.has(l.id));
