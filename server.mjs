@@ -8,6 +8,11 @@ const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://x");
   if (url.pathname === "/health") { res.writeHead(200, { "content-type": "application/json" }); return res.end('{"ok":true}'); }
+  if (url.pathname === "/config.js") {
+    const biller = (process.env.ERHEAT_BILLER_URL || process.env.VITE_BILLER_URL || "").replace(/\/$/, "");
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+    return res.end(`window.__ERHEAT__=${JSON.stringify({ biller })};`);
+  }
   let p = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, "");
   if (p.endsWith("/")) p += "index.html";
   const headers = { "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY" };

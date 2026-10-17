@@ -14,6 +14,7 @@ const opts = {
 function shell() {
   mkdirSync("dist", { recursive: true });
   cpSync("public", "dist", { recursive: true });
+  writeFileSync("dist/config.js", "window.__ERHEAT__={};"); // dev default; server.mjs serves the real one
   writeFileSync("dist/index.html", readFileSync("index.html", "utf8"));
 }
 rmSync("dist", { recursive: true, force: true });

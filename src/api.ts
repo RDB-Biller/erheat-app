@@ -1,6 +1,9 @@
 // The only file that talks to the Biller. No lending rules live here: the app shows what the Biller returns.
 declare const __BILLER_URL__: string;
-export const BILLER = __BILLER_URL__;
+// Runtime setting (served by server.mjs from the ERHEAT_BILLER_URL variable) wins over the build-time default.
+const runtime = (typeof window !== "undefined" && (window as any).__ERHEAT__ && (window as any).__ERHEAT__.biller) || "";
+export const BILLER: string = String(runtime || __BILLER_URL__).replace(/\/$/, "");
+export const BILLER_HOST = BILLER.replace(/^https?:\/\//, "");
 
 export type Field = { key: string; label: string; type: "text" | "number" | "date"; required?: boolean };
 export type Line = {
@@ -33,7 +36,7 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; au
       body: init.body ? JSON.stringify(init.body) : undefined,
     });
   } catch {
-    throw new ApiError("No connection. Check your data or Wi-Fi and try again.", 0);
+    throw new ApiError(`Could not reach ${BILLER_HOST}. Check your data or Wi-Fi and try again. If it keeps happening, tell support which server this says.`, 0);
   }
   let data: any = null;
   try { data = await res.json(); } catch { /* non-JSON error page */ }
