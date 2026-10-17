@@ -24,3 +24,6 @@ export const STAGES: { key: string; label: string; statuses: string[] }[] = [
 ];
 export const stageIndex = (status: string) => STAGES.findIndex((s) => s.statuses.includes(status));
 export const ENDED = ["declined", "cancelled", "expired", "defaulted"];
+
+/** An account is confirmed once either its phone or its email has been proved. */
+export const confirmed = (u: { phone?: string; phoneVerified?: boolean; email?: string; emailVerified?: boolean }) => (!!u.phone && !!u.phoneVerified) || (!!u.email && !!u.emailVerified);

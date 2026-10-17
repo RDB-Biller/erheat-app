@@ -20,7 +20,7 @@ export default function Apply({ lineKey }: { lineKey: string }) {
 
   useEffect(() => { if (user) api.catalogue().then(setCat).catch((e) => setErr(e.message)); }, [user?._id]);
   if (!user) return <Redirect to={`/signin?next=${encodeURIComponent("/apply/" + lineKey)}`} />;
-  if (cat && cat.requireVerifiedPhone && !user.phoneVerified) return <Redirect to={`/verify?next=${encodeURIComponent("/apply/" + lineKey)}`} />;
+  if (cat && (!user.phone || (cat.requireVerifiedPhone && !user.phoneVerified))) return <Redirect to={`/verify?need=phone&next=${encodeURIComponent("/apply/" + lineKey)}`} />;
   if (!cat) return <main className="page">{err ? <Notice kind="error">{err}</Notice> : <Spinner />}</main>;
   const line = cat.lines.find((l) => l.key === lineKey);
   if (!line) return <main className="page"><Notice kind="error">That loan type does not exist.</Notice><a href="#/">Back to loans</a></main>;

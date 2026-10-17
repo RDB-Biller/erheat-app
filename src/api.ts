@@ -19,7 +19,8 @@ export type Loan = {
   voucher: { code: string; expiresAt: string; note: string } | null; evidence: Record<string, string | number>;
   createdAt: string; expiresAt: string; history: { at: string; type: string }[]; repayments: { at: string; amount: number }[];
 };
-export type User = { _id: string; first_name: string; last_name: string; phone: string; phoneVerified: boolean; language?: string; tokens?: { token: string }[] };
+export type AuthOptions = { requirePhone: boolean; emailSignup: boolean };
+export type User = { _id: string; first_name: string; last_name: string; phone?: string; email?: string; phoneVerified: boolean; emailVerified?: boolean; language?: string; tokens?: { token: string }[] };
 
 export class ApiError extends Error { status: number; constructor(m: string, s: number) { super(m); this.status = s; } }
 let token = "";
@@ -56,11 +57,15 @@ export const api = {
   cancel: (id: string) => call<Loan>(`/erheat/api/apps/${id}/cancel`, { method: "POST", body: {} }),
   resend: (id: string, vid: string) => call<Loan>(`/erheat/api/apps/${id}/resend/${vid}`, { method: "POST", body: {} }),
 
-  register: (b: { first_name: string; last_name: string; phone: string; password: string; language: string }) => call<User>(`${PA}/register`, { body: { ...b, source: "erheat" }, auth: false }),
-  login: (b: { phone: string; password: string }) => call<User>(`${PA}/login`, { body: b, auth: false }),
+  authOptions: () => call<AuthOptions>(`${PA}/auth_options`, { auth: false }),
+  register: (b: { first_name: string; last_name: string; phone?: string; email?: string; password: string; language: string }) => call<User>(`${PA}/register`, { body: { ...b, source: "erheat" }, auth: false }),
+  login: (b: { identifier: string; password: string }) => call<User>(`${PA}/login`, { body: b, auth: false }),
   me: () => call<{ user: User }>(`${PA}/me`),
   updateLanguage: (language: string) => call<{ user: User }>(`${PA}/update`, { method: "PATCH", body: { language } }),
   startVerify: (phone: string, lang: string) => call<{ sent: boolean; sandbox?: boolean; to: string; expiresInMinutes: number; codeSandbox?: string }>("/savings/api/verify/start", { body: { phone, lang }, auth: false }),
   checkVerify: (phone: string, code: string) => call<{ verifiedAt: string; receipt: string }>("/savings/api/verify/check", { body: { phone, code }, auth: false }),
+  startEmail: () => call<{ sent: boolean; to: string; codeSandbox?: string; alreadyVerified?: boolean }>(`${PA}/email/start`, { method: "POST", body: {} }),
+  verifyEmail: (code: string) => call<User>(`${PA}/verify_email`, { method: "PATCH", body: { code } }),
+  addPhone: (b: { phone: string; verifiedAt: string; receipt: string }) => call<User>(`${PA}/add_phone`, { method: "PATCH", body: b }),
   verifyPhone: (b: { phone: string; verifiedAt: string; receipt: string }) => call<User>(`${PA}/verify_phone`, { method: "PATCH", body: b, auth: false }),
 };

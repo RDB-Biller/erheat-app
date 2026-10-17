@@ -10,7 +10,7 @@ npm install
 ERHEAT_BILLER_URL=http://localhost:4000 npm run dev   # dev server on :5173
 npm run build && npm start                            # what Railway runs
 ```
-`ERHEAT_BILLER_URL` is read at build time (default `https://hnnbiller.xchangeinsure.com`).
+`ERHEAT_BILLER_URL` is read at build time (default `https://nextgenhnnbiller-production-bdf1.up.railway.app`).
 
 ## Deploy on Railway
 1. New service from this repo. Build and start come from `railway.json`.

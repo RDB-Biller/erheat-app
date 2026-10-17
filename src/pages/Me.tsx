@@ -13,7 +13,10 @@ export default function Me() {
   return (
     <main className="page">
       <h1 className="h1">{user.first_name} {user.last_name}</h1>
-      <p className="lede">{user.phone} · {user.phoneVerified ? "phone confirmed" : <a href="#/verify">confirm your phone</a>}</p>
+      <p className="lede">
+        {user.phone ? <>{user.phone} · {user.phoneVerified ? "phone confirmed" : <a href="#/verify?need=phone&next=%2Fme">confirm your phone</a>}</> : <>No mobile number yet · <a href="#/verify?need=phone&next=%2Fme">add and confirm it</a> (needed before you borrow)</>}
+        {user.email && <><br />{user.email} · {user.emailVerified ? "email confirmed" : <a href="#/verify?next=%2Fme">confirm your email</a>}</>}
+      </p>
       {msg && <Notice kind="ok">{msg}</Notice>}{err && <Notice kind="error">{err}</Notice>}
       <div className="field"><label htmlFor="ml">Language for our texts to you</label><select id="ml" value={user.language || "en"} onChange={(e) => setLang(e.target.value)}>{LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select></div>
       <h2>For sellers and vendors</h2>

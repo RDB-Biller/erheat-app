@@ -2,7 +2,7 @@
 import { build, context } from "esbuild";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
-const BILLER = (process.env.ERHEAT_BILLER_URL || process.env.VITE_BILLER_URL || "https://hnnbiller.xchangeinsure.com").replace(/\/$/, "");
+const BILLER = (process.env.ERHEAT_BILLER_URL || process.env.VITE_BILLER_URL || "https://nextgenhnnbiller-production-bdf1.up.railway.app").replace(/\/$/, "");
 const serve = process.argv.includes("--serve");
 const opts = {
   entryPoints: { app: "src/main.tsx" },
