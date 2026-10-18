@@ -1,4 +1,14 @@
-export const ghs = (n: number | null | undefined) => (n == null ? "" : `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`);
+// Everything is lent and repaid in GHS. When someone views amounts in another currency we add an approximate figure beside the GHS one.
+export type CurView = { code: string; symbol: string; decimals: number; rate: number }; // rate = units of this currency per 1 GHS
+let view: CurView | null = null;
+export const setCurView = (v: CurView | null) => { view = v; };
+const num = (n: number, d: number) => Number(n).toLocaleString("en-GH", { minimumFractionDigits: d, maximumFractionDigits: d });
+export const approx = (n: number) => (!view || view.code === "GHS" ? "" : `≈ ${view.symbol}${view.symbol.length > 1 ? " " : ""}${num(n * view.rate, view.decimals)}`);
+export const ghs = (n: number | null | undefined) => {
+  if (n == null) return "";
+  const base = `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
+  const a = approx(Number(n)); return a ? `${base} (${a})` : base;
+};
 export const when = (iso: string) => { try { return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return iso; } };
 export const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400000));
 /** Ghana-friendly: 024 123 4567 -> +233241234567. Anything starting with + is left alone for the Biller to validate. */

@@ -26,8 +26,10 @@ export type Facility = { id: string; name: string; canConfirm: boolean; phone: s
 export type Pending = { billId: string; kind: "bill"; facility: { id: string; name: string; canConfirm: boolean }; insureCreditNo: string; note: string; billTotal: number; amount: number; at: string };
 export type Awarded = Loan & { awarded: number; repaid: number };
 export type History = { items: Awarded[]; totals: { count: number; borrowed: number; repaid: number; closed: number } };
+export type Currency = { code: string; name: string; symbol: string; decimals: number; region: string; rate: number | null };
+export type CurrencyList = { base: string; main: Currency[]; defaultCurrency: string; other: Currency[]; otherRegions: string[]; rates: { perUSD: Record<string, number>; asOf: string | null; indicative: boolean; note: string }; note: string };
 export type AuthOptions = { requirePhone: boolean; emailSignup: boolean };
-export type User = { _id: string; first_name: string; last_name: string; phone?: string; email?: string; phoneVerified: boolean; emailVerified?: boolean; language?: string; tokens?: { token: string }[] };
+export type User = { _id: string; currency?: string; first_name: string; last_name: string; phone?: string; email?: string; phoneVerified: boolean; emailVerified?: boolean; language?: string; tokens?: { token: string }[] };
 
 export class ApiError extends Error { status: number; constructor(m: string, s: number) { super(m); this.status = s; } }
 let token = "";
@@ -70,6 +72,8 @@ export const api = {
   pending: () => call<{ items: Pending[]; cap?: number }>("/erheat/api/health/pending"),
   history: () => call<History>("/erheat/api/history"),
 
+  currencies: () => call<CurrencyList>("/currency/api/list", { auth: false }),
+  updateCurrency: (currency: string) => call<{ user: User }>(`${PA}/update`, { method: "PATCH", body: { currency } }),
   authOptions: () => call<AuthOptions>(`${PA}/auth_options`, { auth: false }),
   register: (b: { first_name: string; last_name: string; phone?: string; email?: string; password: string; language: string }) => call<User>(`${PA}/register`, { body: { ...b, source: "erheat" }, auth: false }),
   login: (b: { identifier: string; password: string }) => call<User>(`${PA}/login`, { body: b, auth: false }),

@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { SessionProvider } from "./session";
+import { CurrencyProvider } from "./currency";
 import "./styles.css";
 
-createRoot(document.getElementById("root")!).render(<SessionProvider><App /></SessionProvider>);
+createRoot(document.getElementById("root")!).render(<SessionProvider><CurrencyProvider><App /></CurrencyProvider></SessionProvider>);

@@ -130,3 +130,17 @@ legend { font: 800 1.05rem var(--head); padding: 0; margin-bottom: 4px; float: l
 .pick small { display: block; color: var(--muted); }
 .soft { border: 1px dashed var(--rule); border-radius: 10px; padding: 12px; margin: 16px 0; background: var(--white); }
 .soft p { margin: 0 0 8px; }
+
+/* currency bar, other-currencies panel, first sign-in prompt */
+.curbar { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 16px 0; font-size: .85rem; color: var(--muted); }
+.seg.small { margin: 0; grid-template-columns: repeat(3, auto); border-radius: 999px; }
+.seg.small button { padding: 5px 12px; min-height: 34px; font-size: .85rem; }
+.curpanel { position: absolute; top: 100%; right: 12px; z-index: 20; width: min(380px, calc(100vw - 24px)); background: var(--white); border: 1px solid var(--rule); border-radius: 12px; padding: 10px; box-shadow: 0 8px 28px rgba(15, 29, 43, .18); }
+.cursearch { width: 100%; padding: 9px 10px; border: 1px solid var(--rule); border-radius: 8px; font: inherit; margin: 0 0 8px; }
+.curlist { max-height: 46vh; overflow: auto; }
+.curlist h3 { font: 700 .75rem var(--body); color: var(--muted); margin: 10px 0 4px; }
+.curlist button { display: grid; grid-template-columns: 3.2em 1fr auto; gap: 6px; align-items: baseline; width: 100%; text-align: left; background: none; border: 0; padding: 8px 6px; border-radius: 8px; font: inherit; cursor: pointer; min-height: 40px; }
+.curlist button:hover, .curlist button.on { background: #eef2f5; } .curlist small { color: var(--muted); }
+.modal { position: fixed; inset: 0; background: rgba(15, 29, 43, .55); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.modal-card { background: var(--white); border-radius: 14px; padding: 20px; max-width: 420px; width: 100%; } .modal-card h2 { margin: 0 0 8px; }
+.check.big { display: flex; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--rule); border-radius: 10px; margin: 8px 0; font-size: 1rem; } .check.big input { width: 22px; height: 22px; }

@@ -9,6 +9,7 @@ import RequestDetail from "./pages/RequestDetail";
 import Requests from "./pages/Requests";
 import Verify from "./pages/Verify";
 import { Tabs } from "./ui";
+import { CurrencyBar, DefaultCurrencyPrompt } from "./CurrencyBar";
 
 export default function App() {
   const r = useRoute();
@@ -24,5 +25,5 @@ export default function App() {
   else if (r === "/me") page = <Me />;
   else page = <Home />;
   const bare = r === "/signin" || r === "/signup" || r === "/verify";
-  return <div className="app">{page}{!bare && <Tabs route={r} />}</div>;
+  return <div className="app">{!bare && !r.startsWith("/apply/") && <CurrencyBar />}{page}{!bare && <Tabs route={r} />}{!bare && <DefaultCurrencyPrompt />}</div>;
 }
