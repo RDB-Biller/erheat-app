@@ -1,6 +1,7 @@
 import { useEffect, useId } from "react";
 import type { ReactNode, InputHTMLAttributes } from "react";
 import { STAGES, stageIndex, ENDED } from "./format";
+import { useRoute } from "./router";
 
 export const LINE_COLOR: Record<string, string> = { energy: "#E9A100", rent: "#2F6FDE", health: "#D8365B", education: "#7A4FD6", agriculture: "#2E8B4F", transport: "#0E8E91" };
 export const lineColor = (k: string) => LINE_COLOR[k] || "#0F1D2B";
@@ -46,8 +47,43 @@ export function Field({ label, hint, error, ...p }: { label: string; hint?: stri
   );
 }
 
+const SUPPORT = (typeof window !== "undefined" && (window as any).__ERHEAT__ && (window as any).__ERHEAT__.support) || "ekforson@hnnworld.com";
+
+/** No dead ends: wherever an error shows, it also says where to go next. */
+function nextSteps(route: string, message: string): { label: string; href?: string; reload?: boolean }[] {
+  const out: { label: string; href?: string; reload?: boolean }[] = [];
+  const expired = /session|sign in|signed in|token|expired|log in/i.test(message);
+  const notFound = /not found|does not exist|no such/i.test(message);
+  if (expired && route !== "/signin") out.push({ label: "Sign in again", href: "#/signin" });
+  if (route === "/signin") out.push({ label: "Create an account", href: "#/signup" }, { label: "Verify your phone", href: "#/verify" });
+  else if (route === "/signup") out.push({ label: "Already have an account? Sign in", href: "#/signin" });
+  else if (route === "/verify") out.push({ label: "Start again from sign-up", href: "#/signup" }, { label: "Sign in", href: "#/signin" });
+  else if (route.startsWith("/apply/")) out.push({ label: "Back to loans", href: "#/" }, { label: "Your requests", href: "#/requests" });
+  else if (route.startsWith("/requests/")) out.push({ label: "Your requests", href: "#/requests" }, { label: "Ask for a new loan", href: "#/" });
+  else if (route === "/requests") out.push({ label: "Ask for a loan", href: "#/" });
+  else if (route === "/passport" || route === "/profile" || route === "/me") out.push({ label: "Back to home", href: "#/" }, { label: "Sign in", href: "#/signin" });
+  else out.push({ label: "Back to home", href: "#/" }, { label: "Create an account", href: "#/signup" });
+  if (notFound && !out.some((o) => o.href === "#/")) out.push({ label: "Back to home", href: "#/" });
+  out.push({ label: "Try again", reload: true }, { label: "Get help", href: `mailto:${SUPPORT}?subject=ER%20HEAT%20help` });
+  const seen = new Set<string>(); return out.filter((o) => { const k = o.href || "reload"; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4);
+}
+
 export function Notice({ kind = "info", children }: { kind?: "info" | "error" | "ok"; children: ReactNode }) {
-  return <div className={`notice ${kind}`} role={kind === "error" ? "alert" : "status"}>{children}</div>;
+  const route = useRoute();
+  const text = typeof children === "string" ? children : Array.isArray(children) ? children.filter((c) => typeof c === "string").join(" ") : "";
+  return (
+    <div className={`notice ${kind}`} role={kind === "error" ? "alert" : "status"}>
+      {children}
+      {kind === "error" && (
+        <p className="next"><b>What to do next:</b>{" "}
+          {nextSteps(route, text).map((o, i) => (
+            <span key={i}>{i > 0 && <span aria-hidden="true"> · </span>}
+              {o.reload ? <a href="#" onClick={(e) => { e.preventDefault(); window.location.reload(); }}>{o.label}</a> : <a href={o.href}>{o.label}</a>}</span>
+          ))}
+        </p>
+      )}
+    </div>
+  );
 }
 export const Spinner = ({ label = "Loading" }: { label?: string }) => <div className="spin" role="status" aria-label={label}><i /><i /><i /></div>;
 
