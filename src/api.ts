@@ -84,5 +84,6 @@ export const api = {
   startEmail: () => call<{ sent: boolean; to: string; codeSandbox?: string; alreadyVerified?: boolean }>(`${PA}/email/start`, { method: "POST", body: {} }),
   verifyEmail: (code: string) => call<User>(`${PA}/verify_email`, { method: "PATCH", body: { code } }),
   addPhone: (b: { phone: string; verifiedAt: string; receipt: string }) => call<User>(`${PA}/add_phone`, { method: "PATCH", body: b }),
+  changePhone: (b: { phone: string }) => call<User>(`${PA}/change_phone`, { method: "PATCH", body: b }),
   verifyPhone: (b: { phone: string; verifiedAt: string; receipt: string }) => call<User>(`${PA}/verify_phone`, { method: "PATCH", body: b, auth: false }),
 };

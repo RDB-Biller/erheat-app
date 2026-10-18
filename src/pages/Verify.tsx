@@ -13,12 +13,14 @@ export default function Verify() {
   const [phone, setPhone] = useState("");
   const [sent, setSent] = useState<Sent | null>(null);
   const [code, setCode] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const [changing, setChanging] = useState(false); const [newPhone, setNewPhone] = useState("");
   if (!user) return <Redirect to={`/signin?next=${encodeURIComponent("/verify")}`} />;
 
   // What still needs proving: the phone when a loan needs it (or when one was given), otherwise the email.
   const phoneNow = user.phone ? (user.phoneVerified ? "" : user.phone) : "";
   const mode: "phone" | "email" | null = needPhone ? (user.phone && user.phoneVerified ? null : "phone") : phoneNow ? "phone" : user.email && !user.emailVerified ? "email" : null;
   if (!mode) return <Redirect to={next} />;
+  const email = mode === "email";
   const target = user.phone ? user.phone : toE164(phone);
 
   async function send() {
@@ -28,6 +30,24 @@ export default function Verify() {
       else { if (!/^\+\d{8,15}$/.test(target)) throw new Error("Enter a valid mobile number."); const r = await api.startVerify(target, user!.language || "en"); setSent({ to: r.to, code: r.codeSandbox }); }
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   }
+  // Wrong number? Replace it (allowed while it is unconfirmed), then text the new one.
+  async function changeNumber(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setErr("");
+    try {
+      const p = toE164(newPhone); if (!/^\+\d{8,15}$/.test(p)) throw new Error("Enter a valid mobile number.");
+      signIn(await api.changePhone({ phone: p }));
+      const r = await api.startVerify(p, user!.language || "en"); setSent({ to: r.to, code: r.codeSandbox });
+      setChanging(false); setNewPhone(""); setCode("");
+    } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
+  }
+  const changeBox = (!email && user.phone) ? (changing ? (
+    <form onSubmit={changeNumber}>
+      <Field label="Your correct mobile number" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="024 123 4567" required />
+      {err && <Notice kind="error">{err}</Notice>}
+      <button className="btn" disabled={busy}>{busy ? "Sending" : "Use this number and text me a code"}</button>
+      <button type="button" className="link" onClick={() => { setChanging(false); setErr(""); }}>Keep the current number</button>
+    </form>
+  ) : <p className="alt">Wrong number? <a href="#" onClick={(e) => { e.preventDefault(); setErr(""); setChanging(true); }}>Change it</a></p>) : null;
   async function check(e: FormEvent) {
     e.preventDefault(); setBusy(true); setErr("");
     try {
@@ -39,7 +59,6 @@ export default function Verify() {
       go(next);
     } catch (x: any) { setErr(x.message); } finally { setBusy(false); }
   }
-  const email = mode === "email";
   return (
     <main className="page narrow">
       <h1 className="h1">{email ? "Confirm your email" : user.phone ? "Confirm your phone" : "Add your mobile number"}</h1>
@@ -47,7 +66,8 @@ export default function Verify() {
         ? <>We email a 6 digit code to <b>{user.email}</b>.</>
         : user.phone ? <>Lenders and the people who confirm your request need to know this number is really yours. We text a 6 digit code to <b>{user.phone}</b>.</>
           : "Loans are paid and followed up by mobile number, so we need yours before you borrow. We text it a 6 digit code."}</p>
-      {!sent ? (
+      {changing && changeBox}
+      {!changing && (!sent ? (
         <>
           {!email && !user.phone && <Field label="Mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="024 123 4567" required />}
           {err && <Notice kind="error">{err}</Notice>}
@@ -63,7 +83,8 @@ export default function Verify() {
           <button className="btn" disabled={busy || code.trim().length < 4}>{busy ? "Checking" : "Confirm"}</button>
           <button type="button" className="link" onClick={send} disabled={busy}>Send a new code</button>
         </form>
-      )}
+      ))}
+      {!changing && changeBox}
     </main>
   );
 }
