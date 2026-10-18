@@ -9,9 +9,9 @@ import { Field, Icon, Notice, Spinner, lineColor, Redirect } from "../ui";
 type Form = {
   amount: string; purpose: string; evidence: Record<string, string>;
   payeeName: string; payeePhone: string; same: boolean; vName: string; vPhone: string; cName: string; cPhone: string; vLang: string;
-  billId: string; facilityId: string; save: boolean;
+  billId: string; facilityId: string; save: boolean; other: boolean; makeDefault: boolean;
 };
-const blank: Form = { amount: "", purpose: "", evidence: {}, payeeName: "", payeePhone: "", same: true, vName: "", vPhone: "", cName: "", cPhone: "", vLang: "en", billId: "", facilityId: "", save: true };
+const blank: Form = { amount: "", purpose: "", evidence: {}, payeeName: "", payeePhone: "", same: true, vName: "", vPhone: "", cName: "", cPhone: "", vLang: "en", billId: "", facilityId: "", save: true, other: false, makeDefault: false };
 
 export default function Apply({ lineKey }: { lineKey: string }) {
   const { user } = useSession();
@@ -22,19 +22,12 @@ export default function Apply({ lineKey }: { lineKey: string }) {
 
   const [prof, setProf] = useState<Profile | null>(null);
   const [pending, setPending] = useState<Pending[]>([]); const [facs, setFacs] = useState<Facility[]>([]);
-  const [filled, setFilled] = useState(false);
   useEffect(() => { if (user) api.catalogue().then(setCat).catch((e) => setErr(e.message)); }, [user?._id]);
   useEffect(() => {
     if (!user) return;
     api.profile().then(setProf).catch(() => setProf({ lines: {}, updatedAt: null }));
     if (lineKey === "health") { api.pending().then((r) => setPending(r.items)).catch(() => {}); api.facilities().then(setFacs).catch(() => {}); }
   }, [user?._id]);
-  // Saved details fill the form once. Nothing here is required: the person can still change every field.
-  useEffect(() => {
-    if (!prof || filled) return; setFilled(true);
-    const p = prof.lines[lineKey]; if (!p) return;
-    setF((x) => ({ ...x, evidence: { ...p.evidence, ...x.evidence }, ...(p.payee ? { payeeName: p.payee.name, payeePhone: p.payee.phone, same: !p.verifier || p.verifier.phone === p.payee.phone } : {}), ...(p.verifier && p.payee && p.verifier.phone !== p.payee.phone ? { vName: p.verifier.name, vPhone: p.verifier.phone } : {}) }));
-  }, [prof]);
   if (!user) return <Redirect to={`/signin?next=${encodeURIComponent("/apply/" + lineKey)}`} />;
   if (cat && (!user.phone || (cat.requireVerifiedPhone && !user.phoneVerified))) return <Redirect to={`/verify?need=phone&next=${encodeURIComponent("/apply/" + lineKey)}`} />;
   if (!cat) return <main className="page">{err ? <Notice kind="error">{err}</Notice> : <Spinner />}</main>;
@@ -46,10 +39,17 @@ export default function Apply({ lineKey }: { lineKey: string }) {
   const setEv = (k: string, v: string) => setF((p) => ({ ...p, evidence: { ...p.evidence, [k]: v } }));
   const fac = facs.find((x) => x.id === f.facilityId);
   const fromBill = !!f.billId; const fromFacility = !!fac && fac.canConfirm;
-  const steps = fromBill ? ["Amount", "Review"] : ["Amount", ...(line.fields.length ? ["Details"] : []), ...(fromFacility ? [] : ["People"]), "Review"];
-  const fromProfile = !!prof && !!prof.lines[line.key];
+  const saved = prof?.lines[line.key];
+  const hasSaved = !!saved && (Object.keys(saved.evidence).length > 0 || !!saved.payee);
+  const useSaved = hasSaved && !f.other && !fromBill;       // the person chooses, per request, between what is on file and something different
+  const ev: Record<string, string> = useSaved ? { ...saved!.evidence, ...f.evidence } : f.evidence;
+  const askFields = line.fields.filter((fl) => !(useSaved && saved!.evidence[fl.key]));
+  const savedPayee = useSaved ? saved!.payee : undefined;
+  const steps = fromBill ? ["Amount", "Review"] : ["Amount", ...(askFields.length ? ["Details"] : []), ...(fromFacility || savedPayee ? [] : ["People"]), "Review"];
+  function pickMode(mode: "saved" | "other") { setF((p) => ({ ...p, billId: "", facilityId: "", other: mode === "other", amount: p.billId ? "" : p.amount, purpose: p.billId ? "" : p.purpose, evidence: {} })); }
+  const onFile = hasSaved ? line.fields.filter((fl) => saved!.evidence[fl.key]).map((fl) => `${fl.label.replace(" (optional)", "")}: ${saved!.evidence[fl.key]}`).concat(saved!.payee ? [`${line.payeeLabel}: ${saved!.payee.name}`] : []).join(" · ") : "";
   function pickBill(b: Pending | null) {
-    if (!b) return setF((p) => ({ ...p, billId: "", amount: "", purpose: "", evidence: { ...(prof?.lines[line.key]?.evidence || {}) } }));
+    if (!b) return pickMode(hasSaved ? "saved" : "other");
     setF((p) => ({ ...p, billId: b.billId, facilityId: b.facility.id, amount: String(Math.min(b.amount, line.cap)), purpose: b.note, evidence: { facility: b.facility.name, insureCreditNo: b.insureCreditNo, note: b.note } }));
   }
   function pickFacility(id: string) {
@@ -66,7 +66,7 @@ export default function Apply({ lineKey }: { lineKey: string }) {
       if (a > line!.cap) return `Your limit for ${line!.label} is ${ghs(line!.cap)}.${cat!.passport?.level === "new" ? " It rises as you repay." : ""}`;
       if (!f.purpose.trim()) return "Say in a few words what the money is for.";
     }
-    if (cur === "Details") for (const fl of line!.fields) if (fl.required && !String(f.evidence[fl.key] || "").trim()) return `${fl.label} is needed.`;
+    if (cur === "Details") for (const fl of askFields) if (fl.required && !String(ev[fl.key] || "").trim()) return `${fl.label} is needed.`;
     if (cur === "People") {
       if (!f.payeeName.trim() || !f.payeePhone.trim()) return `Enter the name and phone number of the ${line!.payeeLabel.toLowerCase()}.`;
       if (!f.same && (!f.vName.trim() || !f.vPhone.trim())) return `Enter the name and phone number of the ${line!.verifierLabel.toLowerCase()}.`;
@@ -78,18 +78,18 @@ export default function Apply({ lineKey }: { lineKey: string }) {
   }
   async function send() {
     setBusy(true); setErr("");
-    const payee = fromBill || fromFacility ? undefined : { name: f.payeeName.trim(), phone: toE164(f.payeePhone) };
-    const verifier = !payee ? undefined : f.same ? payee : { name: f.vName.trim(), phone: toE164(f.vPhone) };
+    const payee = fromBill || fromFacility ? undefined : savedPayee ? { name: savedPayee.name, phone: savedPayee.phone } : { name: f.payeeName.trim(), phone: toE164(f.payeePhone) };
+    const verifier = !payee ? undefined : savedPayee ? (saved!.verifier || payee) : f.same ? payee : { name: f.vName.trim(), phone: toE164(f.vPhone) };
     try {
       const loan = await api.apply({
         line: line!.key, amount: Number(f.amount), purpose: f.purpose.trim(), ...(payee ? { payee, verifier } : {}), ...(fromBill ? { billId: f.billId } : fromFacility ? { facilityId: f.facilityId } : {}), verifierLang: f.vLang, lang: user!.language || "en",
-        evidence: Object.fromEntries(Object.entries(f.evidence).filter(([, v]) => String(v).trim() !== "")),
+        evidence: Object.fromEntries(Object.entries(ev).filter(([, v]) => String(v).trim() !== "")),
         ...(line!.coVerifierLabel && f.cPhone.trim() ? { coVerifier: { name: f.cName.trim(), phone: toE164(f.cPhone) } } : {}),
       });
-      if (f.save && !fromBill && (payee || Object.keys(f.evidence).length)) {
-        const evidence = Object.fromEntries(Object.entries(f.evidence).filter(([k, v]) => STABLE.includes(k) && String(v).trim() !== ""));
-        const keepPayee = payee && prof?.lines[line!.key]?.payee ? prof.lines[line!.key].payee : payee;
-        void api.saveProfile({ [line!.key]: { evidence: { ...(prof?.lines[line!.key]?.evidence || {}), ...evidence }, ...(keepPayee ? { payee: keepPayee, verifier: verifier || keepPayee } : {}) } }).catch(() => {});
+      if (!fromBill && ((!hasSaved && f.save) || (hasSaved && f.other && f.makeDefault))) {
+        const evidence = Object.fromEntries(Object.entries(ev).filter(([k, v]) => STABLE.includes(k) && String(v).trim() !== ""));
+        const keep = payee || saved?.payee;
+        void api.saveProfile({ [line!.key]: { evidence, ...(keep ? { payee: keep, verifier: verifier || keep } : {}) } }).catch(() => {});
       }
       go(`/requests/${loan.id}`);
     } catch (x: any) { setErr(x.message); setBusy(false); }
@@ -103,20 +103,20 @@ export default function Apply({ lineKey }: { lineKey: string }) {
 
       <form onSubmit={cur === "Review" ? (e) => { e.preventDefault(); void send(); } : advance} noValidate>
         {cur === "Amount" && <>
-          {line.key === "health" && pending.length > 0 && <div className="pick" role="radiogroup" aria-label="From your Biller records">
-            <p className="hint"><b>Waiting for you at your hospital or clinic.</b> Choose one and we fill in the rest. Nothing to type.</p>
-            {pending.map((b) => <label key={b.billId}><input type="radio" name="bill" checked={f.billId === b.billId} onChange={() => pickBill(b)} /><span><b>{b.facility.name}: {ghs(b.billTotal)}</b><small>{b.note}{b.insureCreditNo ? ` · InsureCredit ${b.insureCreditNo}` : ""}</small></span></label>)}
-            <label><input type="radio" name="bill" checked={!f.billId} onChange={() => pickBill(null)} /><span><b>Something else</b><small>Enter the details yourself</small></span></label>
+          {(pending.length > 0 || hasSaved) && <div className="pick" role="radiogroup" aria-label="Which details should we use?">
+            {pending.length > 0 && <p className="hint"><b>Waiting for you at your hospital or clinic.</b> Choose one and we fill in the rest. Nothing to type.</p>}
+            {pending.map((b) => <label key={b.billId}><input type="radio" name="src" checked={f.billId === b.billId} onChange={() => pickBill(b)} /><span><b>{b.facility.name}: {ghs(b.billTotal)}</b><small>{b.note}{b.insureCreditNo ? ` · InsureCredit ${b.insureCreditNo}` : ""}</small></span></label>)}
+            {hasSaved && <label><input type="radio" name="src" checked={!f.billId && !f.other} onChange={() => pickMode("saved")} /><span><b>Use the details on file</b><small>{onFile}</small></span></label>}
+            <label><input type="radio" name="src" checked={!f.billId && (f.other || !hasSaved)} onChange={() => pickMode("other")} /><span><b>{hasSaved ? "Different details for this request" : "Something else"}</b><small>{hasSaved ? "Your profile stays as it is" : "Enter the details yourself"}</small></span></label>
           </div>}
-          {fromProfile && !fromBill && <p className="hint">Details you saved in your profile are filled in. You can change them.</p>}
           <Field label="How much do you need? (GHS)" type="number" inputMode="decimal" min={line.min} max={line.cap} value={f.amount} onChange={(e) => set("amount", e.target.value)} hint={`Between ${ghs(line.min)} and ${ghs(line.cap)}.`} required />
           <Field label="What is it for?" value={f.purpose} onChange={(e) => set("purpose", e.target.value)} maxLength={200} placeholder="A few words" required />
         </>}
         {cur === "Details" && line.key === "health" && facs.length > 0 && <div className="field"><label htmlFor="fac">Hospital, clinic or pharmacy on the Biller</label>
           <select id="fac" value={f.facilityId} onChange={(e) => pickFacility(e.target.value)}><option value="">Not listed: I will type it</option>{facs.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
           {fromFacility && <p className="hint">We text {fac!.name} to confirm. You do not need their number.</p>}</div>}
-        {cur === "Details" && line.fields.filter((fl) => !(fromFacility && fl.key === "facility")).map((fl) => (
-          <Field key={fl.key} label={fl.label} type={fl.type} inputMode={fl.type === "number" ? "decimal" : undefined} value={f.evidence[fl.key] || ""} onChange={(e) => setEv(fl.key, e.target.value)} required={!!fl.required} />
+        {cur === "Details" && askFields.filter((fl) => !(fromFacility && fl.key === "facility")).map((fl) => (
+          <Field key={fl.key} label={fl.label} type={fl.type} inputMode={fl.type === "number" ? "decimal" : undefined} value={ev[fl.key] || ""} onChange={(e) => setEv(fl.key, e.target.value)} required={!!fl.required} />
         ))}
         {cur === "People" && <>
           <fieldset><legend>{line.payeeLabel}</legend>
@@ -139,12 +139,13 @@ export default function Apply({ lineKey }: { lineKey: string }) {
         {cur === "Review" && <dl className="review">
           <dt>Loan</dt><dd>{line.label}: {ghs(Number(f.amount))}</dd>
           <dt>For</dt><dd>{f.purpose}</dd>
-          {line.fields.filter((fl) => f.evidence[fl.key]).map((fl) => <div key={fl.key}><dt>{fl.label}</dt><dd>{f.evidence[fl.key]}</dd></div>)}
-          {fromBill || fromFacility ? <><dt>{line.payeeLabel}</dt><dd>{fac ? fac.name : f.evidence.facility}</dd></> : <><dt>{line.payeeLabel}</dt><dd>{f.payeeName}, {f.payeePhone}</dd></>}
-          {fromBill ? <><dt>Confirmed by</dt><dd>The bill your facility already filed. No text needed.</dd></> : fromFacility ? <><dt>Confirms by phone</dt><dd>{fac!.name}</dd></> : <><dt>Confirms by phone</dt><dd>{f.same ? `${f.payeeName} (same person)` : `${f.vName}, ${f.vPhone}`}{line.coVerifierLabel && f.cPhone.trim() ? `, and ${f.cName || "co-tenant"} ${f.cPhone}` : ""}</dd></>}
+          {line.fields.filter((fl) => ev[fl.key]).map((fl) => <div key={fl.key}><dt>{fl.label}</dt><dd>{ev[fl.key]}</dd></div>)}
+          {fromBill || fromFacility ? <><dt>{line.payeeLabel}</dt><dd>{fac ? fac.name : ev.facility}</dd></> : savedPayee ? <><dt>{line.payeeLabel}</dt><dd>{savedPayee.name} (on file)</dd></> : <><dt>{line.payeeLabel}</dt><dd>{f.payeeName}, {f.payeePhone}</dd></>}
+          {fromBill ? <><dt>Confirmed by</dt><dd>The bill your facility already filed. No text needed.</dd></> : fromFacility ? <><dt>Confirms by phone</dt><dd>{fac!.name}</dd></> : savedPayee ? <><dt>Confirms by phone</dt><dd>{savedPayee.name} (on file)</dd></> : <><dt>Confirms by phone</dt><dd>{f.same ? `${f.payeeName} (same person)` : `${f.vName}, ${f.vPhone}`}{line.coVerifierLabel && f.cPhone.trim() ? `, and ${f.cName || "co-tenant"} ${f.cPhone}` : ""}</dd></>}
         </dl>}
         {cur === "Review" && <Notice>{fromBill ? "Your facility's bill already confirms this. Next you agree and we send it to the lender." : "We text them now. Nothing goes to the lender until they confirm and you agree."}</Notice>}
-        {cur === "Review" && !fromBill && <label className="check"><input type="checkbox" checked={f.save} onChange={(e) => set("save", e.target.checked)} /> Save these details to my profile for next time</label>}
+        {cur === "Review" && !fromBill && !hasSaved && <label className="check"><input type="checkbox" checked={f.save} onChange={(e) => set("save", e.target.checked)} /> Save these details to my profile for next time</label>}
+        {cur === "Review" && !fromBill && hasSaved && f.other && <label className="check"><input type="checkbox" checked={f.makeDefault} onChange={(e) => set("makeDefault", e.target.checked)} /> Make these my new details on file (otherwise this request only)</label>}
         {err && <Notice kind="error">{err}</Notice>}
         <button className="btn" disabled={busy}>{cur === "Review" ? (busy ? "Sending" : fromBill ? "Continue" : "Send for confirmation") : "Continue"}</button>
       </form>
